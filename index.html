@@ -2,19 +2,19 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>Maple 商品走勢圖</title>
-  <!-- 這個 CDN 會載入 Plotly.js -->
+  <title>Maple 商品圖表</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" /> -->
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 </head>
 <body>
-  <h2>互動商品圖表</h2>
+  <h2>Maple 商品走勢圖</h2>
   <a href="https://artale-market.org/transaction">來源</a>
-  <select id="productSelect" style="width:300px;">
-    <!-- Python 會自動插入 <option> -->
-  </select>
+
+  <label for="productSelect">選擇商品：</label>
+  <select id="productSelect" style="width:600px;"></select>
   <script>
     $(document).ready(function() {
       $('#productSelect').select2({
@@ -23,17 +23,59 @@
       });
     });
   </script>
-  <button onclick="generateChart()">產生圖表</button>
+  <button onclick="drawChart()">產生圖表</button>
+
+  <div id="chart" style="width:100%;max-width:1000px;height:600px;"></div>
+
   <script>
-    function generateChart() {
-      const selected = document.getElementById("productSelect").value;
-      const graph = document.getElementById("plotly-graph");
-      graph.innerHTML = selected + "123";
+    const csvUrl = "https://raw.githubusercontent.com/kuiyochen/kuiyochen.github.io/refs/heads/main/Maple.csv";
+    let allData = [];
+
+    fetch(csvUrl)
+      .then(response => response.text())
+      .then(csvText => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function (results) {
+            allData = results.data;
+            const products = [...new Set(allData.map(row => row["物品"]))];
+            const select = document.getElementById("productSelect");
+            select.innerHTML = products.map(p => `<option value="${p}">${p}</option>`).join("");
+          }
+        });
+      });
+
+    function drawChart() {
+      const selectedProduct = document.getElementById("productSelect").value;
+      const filtered = allData.filter(row => row["物品"] === selectedProduct);
+
+      const dates = filtered.map(row => row["日期"]);
+      const low = filtered.map(row => parseFloat(row["最低價"]));
+      const mid = filtered.map(row => parseFloat(row["中位價"]));
+      const high = filtered.map(row => parseFloat(row["最高價"]));
+      const volume = filtered.map(row => parseFloat(row["成交量"]));
+
+      const traces = [
+        { x: dates, y: low, name: "最低價", type: "scatter", line: { dash: "dot", color: "green" } },
+        { x: dates, y: mid, name: "中位價", type: "scatter", line: { width: 3, color: "blue" } },
+        { x: dates, y: high, name: "最高價", type: "scatter", line: { dash: "dot", color: "red" } },
+        { x: dates, y: volume, name: "成交量", type: "bar", yaxis: "y2", marker: { color: "orange", opacity: 0.4 } }
+      ];
+
+      const layout = {
+        title: `${selectedProduct} 價格與成交量`,
+        xaxis: { title: "日期" },
+        yaxis: { title: "價格" },
+        yaxis2: {
+          title: "成交量",
+          overlaying: "y",
+          side: "right"
+        }
+      };
+
+      Plotly.newPlot("chart", traces, layout);
     }
   </script>
-  
-  <!-- 這個 div 是圖表要插入的地方 -->
-  <div id="plotly-graph"></div>
-
 </body>
 </html>
