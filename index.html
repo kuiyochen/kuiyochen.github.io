@@ -5,31 +5,95 @@
   <title>Maple 商品圖表</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <!-- <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" /> -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <style>
+    body {
+      background: linear-gradient(to bottom, #fff6f9, #ffe9ec);
+      font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
+      color: #444;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2rem;
+      color: #e26a94;
+      margin-bottom: 10px;
+    }
+
+    #productSelect {
+      border-radius: 12px;
+      padding: 8px 12px;
+      border: 2px solid #e4a4b5;
+      font-size: 1rem;
+      background-color: #fff;
+    }
+
+    button {
+      background: #f6b5c0;
+      border: none;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-left: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #e28596;
+    }
+
+    #chart {
+      border: 3px dashed #f7ccd8;
+      border-radius: 20px;
+      background-color: #fffdfd;
+      padding: 10px;
+      margin-top: 20px;
+      margin-left: 20%;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    #chart_snow {
+      border: 3px dashed #f7ccd8;
+      border-radius: 20px;
+      background-color: #fffdfd;
+      padding: 10px;
+      margin-top: 20px;
+      margin-left: 20%;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+  </style>
 </head>
 <body>
-  <h2>Maple 商品走勢圖</h2>
-  <a href="https://artale-market.org/transaction">來源</a>
-
-  <label for="productSelect">選擇商品：</label>
-  <select id="productSelect" style="width:600px;"></select>
-  <script>
-    $(document).ready(function() {
-      $('#productSelect').select2({
-        placeholder: "請輸入商品名稱",
-        allowClear: true
+  <div style="margin: 0 0 0 20%">
+    <h2>Maple 商品走勢圖</h2>
+    <label for="productSelect">選擇商品：</label>
+    <select id="productSelect" style="width:600px;"></select>
+    <script>
+      $(document).ready(function() {
+        $('#productSelect').select2({
+          placeholder: "請輸入商品名稱",
+          allowClear: true
+        });
       });
-    });
-  </script>
-  <button onclick="drawChart()">產生圖表</button>
+    </script>
+    <button onclick="drawChart()">產生圖表</button>
+    <a href="https://artale-market.org/transaction">來源</a>
+  </div>
 
+
+  
   <div id="chart" style="width:100%;max-width:1000px;height:600px;"></div>
+  <div id="chart_snow" style="width:100%;max-width:1000px;height:600px;"></div>
 
   <script>
     const csvUrl = "https://raw.githubusercontent.com/kuiyochen/kuiyochen.github.io/refs/heads/main/Maple.csv";
     let allData = [];
+    let products = [];
 
     fetch(csvUrl)
       .then(response => response.text())
@@ -39,7 +103,25 @@
           skipEmptyLines: true,
           complete: function (results) {
             allData = results.data;
-            const products = [...new Set(allData.map(row => row["物品"]))];
+            products = [...new Set(allData.map(row => row["物品"]))];
+            const select = document.getElementById("productSelect");
+            select.innerHTML = products.map(p => `<option value="${p}">${p}</option>`).join("");
+          }
+        });
+      });
+
+    const csvUrl_snow = "https://raw.githubusercontent.com/kuiyochen/kuiyochen.github.io/refs/heads/main/Maple_snow.csv";
+    let allData_snow = [];
+
+    fetch(csvUrl_snow)
+      .then(response => response.text())
+      .then(csvText => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function (results) {
+            allData_snow = results.data;
+            products = [...new Set([...products, ...new Set(allData_snow.map(row => row["物品"]))])];
             const select = document.getElementById("productSelect");
             select.innerHTML = products.map(p => `<option value="${p}">${p}</option>`).join("");
           }
@@ -64,7 +146,7 @@
       ];
 
       const layout = {
-        title: `${selectedProduct} 價格與成交量`,
+        title: `${selectedProduct} 楓幣價格與成交量`,
         xaxis: { title: "日期" },
         yaxis: { title: "價格" },
         yaxis2: {
@@ -75,6 +157,32 @@
       };
 
       Plotly.newPlot("chart", traces, layout);
+      
+      const filtered_snow = allData_snow.filter(row => row["物品"] === selectedProduct);
+
+      const dates_snow = filtered_snow.map(row => row["日期"]);
+      const low_snow = filtered_snow.map(row => parseFloat(row["最低價"]));
+      const mid_snow = filtered_snow.map(row => parseFloat(row["中位價"]));
+      const high_snow = filtered_snow.map(row => parseFloat(row["最高價"]));
+      const volume_snow = filtered_snow.map(row => parseFloat(row["成交量"]));
+
+      const traces_snow = [
+        { x: dates_snow, y: low_snow, name: "最低價", type: "scatter", line: { dash: "dot", color: "green" } },
+        { x: dates_snow, y: mid_snow, name: "中位價", type: "scatter", line: { width: 3, color: "blue" } },
+        { x: dates_snow, y: high_snow, name: "最高價", type: "scatter", line: { dash: "dot", color: "red" } },
+        { x: dates_snow, y: volume_snow, name: "成交量", type: "bar", yaxis: "y2", marker: { color: "orange", opacity: 0.4 } }
+      ];
+      const layout_snow = {
+        title: `${selectedProduct} 雪花價格與成交量`,
+        xaxis: { title: "日期" },
+        yaxis: { title: "價格" },
+        yaxis2: {
+          title: "成交量",
+          overlaying: "y",
+          side: "right"
+        }
+      };
+      Plotly.newPlot("chart_snow", traces_snow, layout_snow);
     }
   </script>
 </body>
