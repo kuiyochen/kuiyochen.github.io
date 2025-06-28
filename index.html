@@ -33,6 +33,15 @@
       margin-bottom: 10px;
       text-align: center;
     }
+    h2 a {
+      text-decoration: none;
+      color: #e26a94;
+      transition: all 0.3s ease;
+    }
+    h2 a:hover {
+      text-decoration: underline;
+      color: #d15882;
+    }
 
     #productSelect {
       border-radius: 12px;
@@ -57,6 +66,7 @@
       background-color: #fffdfd;
       padding: 10px;
       margin-top: 20px;
+      min-height: 250px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.05);
     }
   </style>
@@ -65,7 +75,7 @@
   <div class="container">
     <div>
       <h2>
-      <a href="https://artale-market.org/transaction" target="_blank" style="text-decoration: none; color: #e26a94;">
+      <a href="https://artale-market.org/transaction" target="_blank">
         Maple 商品走勢圖
       </a></h2>
       <label for="productSelect">選擇商品：</label>
@@ -179,6 +189,14 @@
         };
         Plotly.newPlot("chart_snow", traces_snow, layout_snow);
       }
+      let resizeTimeout;
+      window.addEventListener('resize', function () {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function () {
+          Plotly.Plots.resize(document.getElementById('chart'));
+          Plotly.Plots.resize(document.getElementById('chart_snow'));
+        }, 200); // 200ms內只觸發一次
+      });
     </script>
   </div>
 </body>
