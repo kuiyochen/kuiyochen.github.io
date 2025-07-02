@@ -86,6 +86,11 @@
             placeholder: "請輸入商品名稱",
             allowClear: true
           });
+
+          $('#productSelect').on('select2:open', function () {
+            const selectedText = $('#productSelect option:selected').text();
+            $('.select2-search__field').val(selectedText);
+          });
         });
       </script>
       <button onclick="drawChart()">產生圖表</button>
